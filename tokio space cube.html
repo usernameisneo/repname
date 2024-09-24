@@ -1,0 +1,182 @@
+<html><head><base href="https://tokyo-neon-kaleidoscope.retro-future.com/">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tokyo Neon Cube Kaleidoscope</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #000;
+    font-family: 'VT323', monospace;
+  }
+  #neonSign {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    color: #ff00ff;
+    font-size: 24px;
+    text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 15px #ff00ff, 0 0 20px #ff00ff;
+    animation: flicker 1.5s infinite alternate;
+    z-index: 1000;
+  }
+  @keyframes flicker {
+    0%, 18%, 22%, 25%, 53%, 57%, 100% {
+      text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 15px #ff00ff, 0 0 20px #ff00ff;
+    }
+    20%, 24%, 55% {
+      text-shadow: none;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="neonSign">東京ネオンキューブ万華鏡</div>
+<script>
+let cubes = [];
+const numCubes = 5;
+let lights = [];
+const numLights = 8;
+let kaleidoscopeGraphics;
+let noiseOffset = 0;
+
+function setup() {
+  createCanvas(windowWidth, windowHeight, WEBGL);
+  colorMode(HSB);
+  
+  kaleidoscopeGraphics = createGraphics(width, height);
+  kaleidoscopeGraphics.colorMode(HSB);
+  
+  for (let i = 0; i < numCubes; i++) {
+    cubes.push(new Cube(100, i * 0.05));
+  }
+  
+  for (let i = 0; i < numLights; i++) {
+    lights.push(new PointLight());
+  }
+}
+
+function draw() {
+  background(0);
+  
+  // Draw kaleidoscopic background
+  drawKaleidoscopeBackground();
+  
+  // Update and display lights
+  for (let light of lights) {
+    light.update();
+    light.display();
+  }
+  
+  // Update and display cubes
+  for (let cube of cubes) {
+    cube.update();
+    cube.display();
+  }
+}
+
+function drawKaleidoscopeBackground() {
+  kaleidoscopeGraphics.background(0);
+  
+  let segments = 8;
+  let angleStep = TWO_PI / segments;
+  
+  for (let i = 0; i < segments; i++) {
+    let angle = i * angleStep;
+    let x1 = width / 2 + cos(angle) * width / 4;
+    let y1 = height / 2 + sin(angle) * height / 4;
+    let x2 = width / 2 + cos(angle + angleStep) * width / 4;
+    let y2 = height / 2 + sin(angle + angleStep) * height / 4;
+    
+    let gradientColor1 = color((noiseOffset + i * 30) % 360, 100, 100);
+    let gradientColor2 = color((noiseOffset + (i + 1) * 30) % 360, 100, 100);
+    
+    kaleidoscopeGraphics.push();
+    kaleidoscopeGraphics.translate(width / 2, height / 2);
+    kaleidoscopeGraphics.rotate(angle);
+    
+    for (let j = 0; j < 10; j++) {
+      let t = j / 9;
+      let x = lerp(0, width / 2, t);
+      let y = lerp(-height / 4, height / 4, t);
+      let c = lerpColor(gradientColor1, gradientColor2, t);
+      
+      kaleidoscopeGraphics.stroke(c);
+      kaleidoscopeGraphics.strokeWeight(2);
+      kaleidoscopeGraphics.point(x + noise(noiseOffset + j * 0.1) * 20, y + noise(noiseOffset + j * 0.1 + 1000) * 20);
+    }
+    
+    kaleidoscopeGraphics.pop();
+  }
+  
+  noiseOffset += 0.02;
+  
+  // Display the kaleidoscope background
+  push();
+  translate(-width/2, -height/2, -500);
+  texture(kaleidoscopeGraphics);
+  plane(width, height);
+  pop();
+}
+
+class Cube {
+  constructor(size, offset) {
+    this.size = size;
+    this.offset = offset;
+    this.rotation = 0;
+    this.color = color(random(360), 100, 100);
+  }
+  
+  update() {
+    this.rotation += 0.01;
+    if (this.checkOverlap()) {
+      this.color = color(random(360), 100, 100);
+    }
+  }
+  
+  display() {
+    push();
+    rotateX(this.rotation + this.offset);
+    rotateY(this.rotation + this.offset);
+    rotateZ(this.rotation + this.offset);
+    
+    stroke(this.color);
+    strokeWeight(2);
+    noFill();
+    specularMaterial(250);
+    shininess(100);
+    box(this.size);
+    pop();
+  }
+  
+  checkOverlap() {
+    return frameCount % 60 === 0;
+  }
+}
+
+class PointLight {
+  constructor() {
+    this.position = p5.Vector.random3D().mult(200);
+    this.color = color(random(360), 100, 100);
+  }
+  
+  update() {
+    this.position.rotate(0.02);
+  }
+  
+  display() {
+    push();
+    translate(this.position.x, this.position.y, this.position.z);
+    pointLight(this.color, 0, 0, 0);
+    pop();
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+  kaleidoscopeGraphics.resizeCanvas(width, height);
+}
+</script>
+</body>
+</html>
